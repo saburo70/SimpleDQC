@@ -81,3 +81,7 @@ For detailed instructions on how to configure and run SimpleDQC, please refer to
 - [Control Query Format](docs/CONTROL_QUERIES.md)
 - [Email Configuration](docs/EMAIL_CONFIGURATION.md)
 - [Repository Configuration](docs/REPOSITORY_CONFIGURATION.md)
+
+## License
+
+SimpleDQC is released under the [Apache License 2.0](LICENSE).
