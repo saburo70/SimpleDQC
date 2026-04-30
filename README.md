@@ -77,7 +77,7 @@ spring:
 For detailed instructions on how to configure and run SimpleDQC, please refer to the documentation:
 
 - [Running the Application](docs/RUNNING_THE_APPLICATION.md)
-- [Dashboard Guide](docs/DASHBOARD_GUIDE.md)
+- [Dashboard Guide (with Screenshots)](docs/DASHBOARD_GUIDE.md)
 - [Control Query Format](docs/CONTROL_QUERIES.md)
 - [Email Configuration](docs/EMAIL_CONFIGURATION.md)
 - [Repository Configuration](docs/REPOSITORY_CONFIGURATION.md)
