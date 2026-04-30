@@ -5,49 +5,70 @@ The SimpleDQC dashboard provides a centralized interface to monitor data quality
 ---
 
 ## 1. Control Summary
-The **Control Summary** is the default view. it provides a high-level overview of the current status of all data quality controls.
+The **Control Summary** is the default view. It provides a high-level overview of the current status of all data quality controls.
 
-- **Status Overview**: Quickly see which controls are passing, failing, or encountering errors.
-- **Active vs. Known Issues**: Each control displays the count of "Active Issues" (new problems) versus "Known Issues" (documented exceptions).
-- **Drill-down**: Clicking on any control row opens the **Issues Modal**, allowing you to inspect individual records.
-- **Run Controls**: The "Run All Controls" button triggers a fresh execution of all SQL queries in the `controls/` directory.
+![Control Summary](./img/1.png)
 
----
-
-## 2. Execution History
-The **Execution History** view provides a chronological log of every control run.
-
-- **Traceability**: See when a control was run, how long it took (`elapsed`), and the results at that specific point in time.
-- **SQL File Mapping**: Identifies which physical `.sql` file was used for each execution.
-- **Cleanup**: Allows administrators to delete old execution logs.
+- **Status Overview**: Quickly see which controls are passing, failing (`FAIL`), or encountering errors.
+- **Key Metrics**:
+    - **Active Issues**: The number of current records failing the business rule.
+    - **Known Issues**: Exceptions that have been acknowledged and "muted."
+- **Execution Metadata**: Displays the timestamp of the last run and the elapsed time.
+- **Filtering**: Use the "Show failing cases only" toggle to focus on active problems.
+- **Run Controls**: The "Run All Controls" button triggers a fresh execution of all SQL queries.
 
 ---
 
-## 3. Queries (Editor)
-The **Queries** view allows users to browse and manage the SQL files stored in the `controls/` directory.
+## 2. Managing Issues (Drill-down)
+Clicking on any control row in the Summary opens the **Issues Modal**.
 
-- **Live Preview**: You can write and test SQL queries directly in the dashboard before saving them as permanent controls.
-- **Metadata Management**: The editor ensures that required tags like `$CODE=` and `$DESCRIPTION=` are present.
-- **Demo Controls**: Pre-packaged example controls are marked with a `DEMO` badge.
-- **Frictionless Deployment**: Saving a query creates or updates a `.sql` file in the folder, instantly making it part of the daily routine.
+![Issues Modal](./img/2.png)
+
+- **Detailed Inspection**: View all raw records returned by the SQL query.
+- **Exporting**: Click **"Export CSV"** to download the list for further analysis or reporting.
+- **Handling Known Issues**: 
+    - Click **"Mark Known"** on a specific `issueKey` to suppress it from future alerts.
+    - Toggle **"Show known issues"** to see previously muted exceptions (highlighted in the list).
 
 ---
 
-## 4. Managing "Known Issues"
+## 3. Queries Management
+The **Queries** view lists all available SQL control files.
 
-One of the most powerful features of SimpleDQC is the **Known Issues** system.
+![Queries List](./img/3.png)
 
-### What are Known Issues?
-In real-world data projects, some data quality issues are "known" but cannot or will not be fixed immediately (e.g., a legacy system user that is not supposed to have an email address). If these are not handled, they create "noise" in your reports, making it harder to spot *new* issues.
+- **File Management**: View filenames, associated control codes, and descriptions.
+- **Demo Content**: Files provided as examples are clearly marked with a `DEMO` badge.
+- **Actions**:
+    - **Edit/View**: Open the SQL editor for a specific control.
+    - **Delete**: Remove a control file from the system.
+    - **+ New Query**: Create a new control from scratch.
 
-**Known Issues are a way to "ignore" specific exceptions so they no longer trigger alerts.**
+---
 
-### How it Works:
-1. **Identify**: In the Issues Modal, find a row that represents a persistent exception.
-2. **Mark Known**: Click the **"Mark Known"** button for that specific `issueKey`.
-3. **Suppression**:
-   - The issue will no longer be counted as an "Active Issue."
-   - It will no longer trigger email alerts for that control.
-   - It is moved to the "Known Issues" bucket.
-4. **Visibility**: You can still see these issues by toggling **"Show known issues"** in the modal. They are highlighted in yellow.
-5. **Reversal**: If the issue is later fixed in the source system or needs to be monitored again, you can click **"Remove Known"** to bring it back into the "Active" list.
+## 4. SQL Editor
+The built-in editor allows you to develop and test controls in real-time.
+
+![SQL Editor](./img/4.png)
+
+- **Metadata Tags**: Use `$CODE=` and `$DESCRIPTION=` comments to define control properties.
+- **Live Run**: Use the **"Run"** button to execute the query against the source database and preview results without saving.
+- **Save/Cancel**: Instantly deploy changes to the `controls/` folder.
+
+---
+
+## 5. Email Alerts
+When controls are executed (either via the dashboard or a scheduler), SimpleDQC sends an automated report if issues are found.
+
+![Email Report](./img/5.png)
+
+- **Summary Table**: Lists all executed controls, issue counts, and final status.
+- **Actionable Data**: Quickly identify which areas need attention from your inbox.
+
+---
+
+## 6. Execution History
+The **Execution History** view provides a chronological log of every control run, ensuring full traceability of your data quality over time.
+
+- **Status Tracking**: Monitor transitions from `error` to `done`.
+- **Performance Monitoring**: Track `elapsed` time to identify slow-running queries.
