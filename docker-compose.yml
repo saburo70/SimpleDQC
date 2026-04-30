@@ -1,0 +1,47 @@
+services:
+
+  simpledqc:
+    image: simpledqc:latest
+    # build: .   # uncomment to build from source instead of using a pre-built image
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./controls:/app/controls
+      - ./repository:/app/repository
+      - ./scheduler:/app/scheduler
+      # - ./certs:/app/certs   # uncomment if using TLS
+    environment:
+      # Repository (H2 embedded - default)
+      - SPRING_DATASOURCE_REPO_URL=jdbc:h2:file:/app/repository/dq-repo;INIT=RUNSCRIPT FROM 'classpath:schema-repo.sql'
+      # Source database (set these to your actual values)
+      - SPRING_DATASOURCE_SOURCE_JDBC-URL=jdbc:mysql://your-source-db:3306/your_schema
+      - SPRING_DATASOURCE_SOURCE_USERNAME=your_user
+      - SPRING_DATASOURCE_SOURCE_PASSWORD=your_password
+      # Email (set these to your actual values)
+      - SPRING_MAIL_HOST=smtp.gmail.com
+      - SPRING_MAIL_PORT=587
+      - SPRING_MAIL_USERNAME=your_email@gmail.com
+      - SPRING_MAIL_PASSWORD=your_app_password
+      # DQ service settings
+      - DQ_DEMO=false
+      - DQ_ALLOW-WRITE=false
+      - DQ_EMAIL-ENABLED=true
+      - DQ_SEND-ON-FAILURE=true
+      - DQ_RECIPIENTS=ops@yourcompany.com
+    restart: unless-stopped
+
+  # Optional: include a MySQL instance as the source database for testing
+  # mysql-source:
+  #   image: mysql:8
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: root
+  #     MYSQL_DATABASE: your_schema
+  #     MYSQL_USER: your_user
+  #     MYSQL_PASSWORD: your_password
+  #   ports:
+  #     - "3306:3306"
+  #   volumes:
+  #     - mysql-data:/var/lib/mysql
+
+# volumes:
+#   mysql-data:

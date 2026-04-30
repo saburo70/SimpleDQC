@@ -77,6 +77,7 @@ spring:
 For detailed instructions on how to configure and run SimpleDQC, please refer to the documentation:
 
 - [Running the Application](docs/RUNNING_THE_APPLICATION.md)
+- [Docker Deployment](docs/DOCKER_GUIDE.md)
 - [Dashboard Guide (with Screenshots)](docs/DASHBOARD_GUIDE.md)
 - [API Endpoints](docs/API_ENDPOINTS.md)
 - [TLS/SSL Configuration](docs/TLS_CONFIGURATION.md)
