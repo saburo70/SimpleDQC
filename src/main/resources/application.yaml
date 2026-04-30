@@ -1,0 +1,58 @@
+spring:
+  application:
+    name: dq
+  sql:
+    init:
+     # Set to 'always' to initialize the database on every startup, 'never' to disable initialization, 'embedded' to initialize only if an embedded database is used
+      mode: never
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: itisme@gmail.com
+    password: 1111 2222 3333 4444
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+server:
+  port: 8090
+
+repo:
+  # Set to true to use the same connection as 'source'
+  use-source: false
+  # If using the same connection, specify a separate schema for repository tables
+  schema: repo
+  # Set to true to use embedded H2 (data stored in ./repository/dq-repo.mv.db)
+  embedded: true
+  datasource:
+    # Used when repo.embedded=false and use-source=false
+    url: jdbc:mysql://yourRepositoryHost/yourDb
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: yourRepositoryUser
+    password: yourRepositoryPassword
+
+dq:
+  demo: true
+  #it is adviced to set this to false in production, as it allows users to modify data in the source database
+  allow-write: true
+  mail:
+    enabled: true
+    # Comma-separated list of recipient addresses
+    recipients: "operations1@yahoo.com,operations2@yahoo.com"
+    # 'on-failure' = send only when at least one control has issues; 'always' = send after every run
+    send-on: on-failure
+
+source:
+  datasource:
+    jdbc-url: jdbc:mysql://youtrSourceDb/yourSchema
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  #strongly advised to use a db user with read only grants on the source database, to prevent accidental data modifications
+    username: dbuser
+    password: userpassword
+    hikari:
+      max-lifetime: 600000
+      keepalive-time: 60000
+      connection-test-query: SELECT 1

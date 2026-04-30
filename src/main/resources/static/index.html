@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Quality Dashboard</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+        }
+
+        nav {
+            width: 240px;
+            background: #1e293b;
+            color: white;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        nav h1 {
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+            color: #94a3b8;
+            padding-left: 0.5rem;
+        }
+
+        .nav-item {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: #334155;
+        }
+
+        main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .btn:hover { background: #1d4ed8; }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th { background: #f1f5f9; font-weight: 600; }
+
+        .status-pill {
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-error     { background: #fee2e2; color: #991b1b; }
+        .status-success   { background: #dcfce7; color: #166534; }
+        .status-running   { background: #fef9c3; color: #854d0e; }
+        .status-cancelled { background: #f1f5f9; color: #475569; }
+
+        .issue-row:hover { background: #f1f5f9; cursor: pointer; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 0.5rem;
+            max-width: 90vw;
+            width: 1000px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+            border-radius: 0.5rem 0.5rem 0 0;
+        }
+
+        .modal-body {
+            padding: 0; /* Removed padding to prevent rows bleeding above sticky header */
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .compact-table {
+            font-size: 0.875rem;
+            border-spacing: 0;
+            width: 100%;
+        }
+
+        .compact-table th {
+            padding: 0.75rem 0.5rem;
+            background: #475569;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1);
+        }
+
+        .compact-table td {
+            padding: 0.4rem 0.5rem;
+        }
+
+        .compact-table tbody tr:nth-child(even) {
+            background-color: #f1f5f9;
+        }
+
+        .compact-table tbody tr:hover {
+            background-color: #e2e8f0;
+        }
+
+        .btn-warning {
+            background: #92400e; /* Darker amber for better contrast */
+            color: white;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            border-radius: 0.25rem;
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn-warning:hover { background: #78350f; }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-outline:hover { background: #f1f5f9; }
+
+        .btn-remove-known {
+            background: #6b7280;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            border-radius: 0.25rem;
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn-remove-known:hover { background: #4b5563; }
+
+        .known-row { background-color: #fef9c3 !important; }
+
+        .btn-danger {
+            background: #dc2626; color: white; border: none;
+            padding: 0.25rem 0.5rem; font-size: 0.75rem; border-radius: 0.25rem;
+            cursor: pointer; white-space: nowrap;
+        }
+        .btn-danger:hover { background: #b91c1c; }
+
+        .btn-secondary {
+            background: #64748b; color: white; border: none;
+            padding: 0.5rem 1rem; border-radius: 0.375rem; cursor: pointer; font-weight: 500;
+        }
+        .btn-secondary:hover { background: #475569; }
+
+        .demo-badge {
+            background: #fef9c3; color: #92400e;
+            border-radius: 9999px; font-size: 0.7rem; font-weight: 600;
+            padding: 0.15rem 0.6rem; white-space: nowrap;
+        }
+
+
+        .editor-filename-bar {
+            background: #f1f5f9;
+            border-bottom: 1px solid var(--border);
+            padding: 0.4rem 1rem;
+            font-size: 0.8rem;
+            color: #64748b;
+            font-family: monospace;
+            flex-shrink: 0;
+        }
+
+        main.editor-mode {
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        main.editor-mode .header {
+            padding: 0.75rem 2rem;
+            margin-bottom: 0;
+            border-bottom: 1px solid var(--border);
+            background: white;
+            flex-shrink: 0;
+        }
+        main.editor-mode #content {
+            flex: 1;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .editor-pane {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+        .editor-new-file-bar {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+        .editor-msg {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            background: #fee2e2;
+            color: #991b1b;
+            border-bottom: 1px solid #fca5a5;
+            flex-shrink: 0;
+        }
+
+        .editor-pane .CodeMirror {
+            font-size: 0.9rem;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            border: none !important;
+            border-radius: 0 !important;
+        }
+
+        .results-panel {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-top: 2px solid var(--primary);
+            background: white;
+            overflow: hidden;
+        }
+        .results-panel-header {
+            padding: 0.35rem 1rem;
+            background: #eff6ff;
+            border-bottom: 1px solid #bfdbfe;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #1e40af;
+            flex-shrink: 0;
+            gap: 1rem;
+        }
+        .results-panel-header.error {
+            background: #fef2f2;
+            border-bottom-color: #fca5a5;
+            color: #991b1b;
+        }
+        .results-panel-body {
+            overflow: auto;
+            flex: 1;
+        }
+        .results-panel-body table {
+            font-size: 0.8rem;
+            border-collapse: collapse;
+            white-space: nowrap;
+        }
+        .results-panel-body th {
+            position: sticky;
+            top: 0;
+            background: #334155;
+            color: white;
+            padding: 0.35rem 0.6rem;
+            font-weight: 600;
+            z-index: 1;
+        }
+        .results-panel-body td {
+            padding: 0.3rem 0.6rem;
+            border-bottom: 1px solid var(--border);
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .results-panel-body tr:nth-child(even) { background: #f8fafc; }
+        .results-panel-body .null-val { color: #94a3b8; font-style: italic; }
+
+        .resize-handle {
+            height: 5px;
+            flex-shrink: 0;
+            background: var(--border);
+            cursor: ns-resize;
+            transition: background 0.15s;
+        }
+        .resize-handle:hover, .resize-handle.dragging { background: var(--primary); }
+        .btn-run {
+            background: #16a34a; color: white; border: none;
+            padding: 0.5rem 1rem; border-radius: 0.375rem; cursor: pointer; font-weight: 500;
+        }
+        .btn-run:hover { background: #15803d; }
+        .btn-run:disabled { background: #86efac; cursor: default; }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/eclipse.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+</head>
+<body>
+    <nav>
+        <h1>DQ Control</h1>
+        <div class="nav-item active" onclick="showView('summary', event)">Control Summary</div>
+        <div class="nav-item" onclick="showView('history', event)">Execution History</div>
+        <div class="nav-item" onclick="showView('queries', event)">Queries</div>
+    </nav>
+    <main>
+        <div class="header">
+            <h2 id="view-title">Control Summary</h2>
+            <div id="header-actions" style="display:flex; align-items:center; gap:1rem">
+                <label id="filter-container" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.9rem">
+                    <input type="checkbox" id="fail-only-toggle" checked onchange="refreshCurrentView()">
+                    Show failing cases only
+                </label>
+                <div id="history-filter-container" style="display:none; align-items:center; gap:0.5rem; font-size:0.9rem">
+                    Filter by Control:
+                    <select id="control-filter" onchange="refreshCurrentView()" style="padding:0.25rem; border-radius:0.25rem; border:1px solid var(--border)">
+                        <option value="--ALL--">--ALL--</option>
+                    </select>
+                </div>
+                <button id="run-btn" class="btn" onclick="runControls()">Run All Controls</button>
+                <button id="new-query-btn" class="btn" style="display:none" onclick="openNewQueryEditor()">+ New Query</button>
+                <button id="run-query-btn" class="btn-run" style="display:none" onclick="runQuery()">&#9654; Run</button>
+                <button id="save-query-btn" class="btn" style="display:none" onclick="saveQuery()">Save</button>
+                <button id="cancel-editor-btn" class="btn-secondary" style="display:none" onclick="navTo('queries')">Cancel</button>
+            </div>
+        </div>
+
+        <div id="content"></div>
+    </main>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title" style="margin:0">Issues</h3>
+                <div style="display:flex; gap:1rem; align-items:center">
+                    <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.875rem; cursor:pointer; color:#475569">
+                        <input type="checkbox" id="show-known-toggle" onchange="renderIssueTable()">
+                        Show known issues
+                    </label>
+                    <button class="btn-outline" onclick="exportToExcel()">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/><path d="M4.5 12.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/></svg>
+                        Export CSV
+                    </button>
+                    <button onclick="closeModal()" style="border:none; background:none; cursor:pointer; font-size:1.5rem; color:#64748b">&times;</button>
+                </div>
+            </div>
+            <div id="modal-body" class="modal-body"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentView = 'summary';
+        let currentIssues = [];
+        let currentKnownIssues = [];
+        let currentControlCode = '';
+        let queryWriteEnabled = false;
+        let currentEditFilename = null;
+        let cmEditor = null;
+        const QUERY_BOILERPLATE = `/*\n$CODE=\n$DESCRIPTION=\n*/\nSELECT\n    id AS issueKey\nFROM your_table\nWHERE 1=0`;
+        let resultsCollapsed = false;
+        let resultsHeight    = 0;
+        let dragState = null; // { startY, startHeight }
+
+        async function fetchData(url) {
+            const res = await fetch(url);
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                return data.map(row => Object.fromEntries(
+                    Object.entries(row).map(([k, v]) => [k.toLowerCase(), v])
+                ));
+            }
+            return data;
+        }
+
+        async function showView(view, event) {
+            if (cmEditor) { cmEditor.toTextArea(); cmEditor = null; }
+            document.querySelector('main').classList.remove('editor-mode');
+            currentView = view;
+            if (event) {
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                event.target.classList.add('active');
+            }
+
+            const content = document.getElementById('content');
+            const title = document.getElementById('view-title');
+            const filterContainer = document.getElementById('filter-container');
+            const historyFilterContainer = document.getElementById('history-filter-container');
+
+            content.innerHTML = 'Loading...';
+            filterContainer.style.display      = view === 'summary' ? 'flex' : 'none';
+            historyFilterContainer.style.display = view === 'history' ? 'flex' : 'none';
+            document.getElementById('run-btn').style.display           = view === 'queries' ? 'none' : '';
+            document.getElementById('new-query-btn').style.display     = 'none';
+            document.getElementById('run-query-btn').style.display     = 'none';
+            document.getElementById('save-query-btn').style.display    = 'none';
+            document.getElementById('cancel-editor-btn').style.display = 'none';
+
+            if (view === 'summary') {
+                title.innerText = 'Control Summary';
+                const data = await fetchData('/api/controls/summary');
+                renderSummary(data);
+            } else if (view === 'history') {
+                title.innerText = 'Execution History';
+                const data = await fetchData('/api/history');
+                updateControlFilterOptions(data);
+                renderHistory(data);
+            } else if (view === 'queries') {
+                title.innerText = 'Queries';
+                await loadQueries();
+            }
+        }
+
+        function updateControlFilterOptions(data) {
+            const select = document.getElementById('control-filter');
+            const currentValue = select.value;
+            const codes = [...new Set(data.map(row => row.controlcode))].sort();
+            
+            select.innerHTML = '<option value="--ALL--">--ALL--</option>';
+            codes.forEach(code => {
+                const opt = document.createElement('option');
+                opt.value = code;
+                opt.innerText = code;
+                select.appendChild(opt);
+            });
+            
+            if (codes.includes(currentValue)) {
+                select.value = currentValue;
+            } else {
+                select.value = '--ALL--';
+            }
+
+        }
+
+        function refreshCurrentView() {
+            showView(currentView);
+        }
+
+        function execStatusPill(row) {
+            if (row.status === 'running')   return '<span class="status-pill status-running">RUNNING</span>';
+            if (row.status === 'cancelled') return '<span class="status-pill status-cancelled">CANCELLED</span>';
+            if (row.status === 'error')     return '<span class="status-pill status-error">ERROR</span>';
+            if (row.issues > 0)             return '<span class="status-pill status-error">FAIL</span>';
+            return '<span class="status-pill status-success">PASS</span>';
+        }
+
+        function renderSummary(data) {
+            const failOnly = document.getElementById('fail-only-toggle').checked;
+            const filteredData = failOnly
+                ? data.filter(row => row.issues > 0 || row.status === 'running' || row.status === 'error')
+                : data;
+
+            if (filteredData.length === 0) {
+                document.getElementById('content').innerHTML = '<div class="card"><p>No controls matching criteria.</p></div>';
+                return;
+            }
+
+            let html = `
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Description</th>
+                                <th>Last Run</th>
+                                <th>Elapsed</th>
+                                <th>Active Issues</th>
+                                <th>Known Issues</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            filteredData.forEach(row => {
+                html += `
+                    <tr class="issue-row" onclick="inspectIssues('${row.controlcode}')">
+                        <td>${row.controlcode}</td>
+                        <td>${row.controldescription}</td>
+                        <td>${new Date(row.ts).toLocaleString()}</td>
+                        <td>${row.elapsed != null ? row.elapsed + 'ms' : '—'}</td>
+                        <td style="font-weight:bold; color:${row.issues > 0 ? 'var(--error)' : 'inherit'}">${row.issues ?? '—'}</td>
+                        <td>${row.known ?? '—'}</td>
+                        <td>${execStatusPill(row)}</td>
+                    </tr>
+                `;
+            });
+            html += '</tbody></table></div>';
+            document.getElementById('content').innerHTML = html;
+        }
+
+        function renderHistory(data) {
+            const controlFilter = document.getElementById('control-filter').value;
+            const filteredData = controlFilter === '--ALL--'
+                ? data
+                : data.filter(row => row.controlcode === controlFilter);
+
+            if (filteredData.length === 0) {
+                document.getElementById('content').innerHTML = '<div class="card"><p>No history matching criteria.</p></div>';
+                return;
+            }
+
+            let html = `
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Control</th>
+                                <th>Elapsed</th>
+                                <th>Issues</th>
+                                <th>Known</th>
+                                <th>SQL File</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            filteredData.forEach(row => {
+                html += `
+                    <tr>
+                        <td>${new Date(row.ts).toLocaleString()}</td>
+                        <td><b>${row.controlcode}</b><br><small>${row.controldescription}</small></td>
+                        <td>${row.elapsed != null ? row.elapsed + 'ms' : '—'}</td>
+                        <td>${row.issues ?? '—'}</td>
+                        <td>${row.known ?? '—'}</td>
+                        <td>${row.sqlfile}</td>
+                        <td>${execStatusPill(row)}</td>
+                        <td><button class="btn-danger" onclick="deleteHistory(${row.id}, event)">Delete</button></td>
+                    </tr>
+                `;
+            });
+            html += '</tbody></table></div>';
+            document.getElementById('content').innerHTML = html;
+        }
+
+        async function deleteHistory(id, event) {
+            event.stopPropagation();
+            const res = await fetch(`/api/history/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                showView('history');
+            } else {
+                alert('Delete failed: ' + await res.text());
+            }
+        }
+
+        async function inspectIssues(code) {
+            const modal = document.getElementById('modal');
+            const title = document.getElementById('modal-title');
+            const body = document.getElementById('modal-body');
+
+            let desc = '';
+            const summaryData = await fetchData('/api/controls/summary');
+            const ctrl = summaryData.find(c => c.controlcode === code);
+            if (ctrl) desc = ctrl.controldescription;
+
+            currentControlCode = code;
+            document.getElementById('show-known-toggle').checked = false;
+            title.innerHTML = `Active Issues: <b>${code}</b> <br><small style="color:#64748b; font-weight:normal">${desc}</small>`;
+            body.innerHTML = '<div style="padding:2rem; text-align:center">Loading issues...</div>';
+            modal.style.display = 'flex';
+
+            const [activeData, knownData] = await Promise.all([
+                fetchData(`/api/controls/${code}/issues`),
+                fetchData(`/api/controls/${code}/known-issues`)
+            ]);
+            currentIssues = activeData;
+            currentKnownIssues = knownData;
+
+            renderIssueTable();
+        }
+
+        function renderIssueTable() {
+            const body = document.getElementById('modal-body');
+            const showKnown = document.getElementById('show-known-toggle').checked;
+
+            const activeRows = currentIssues.map(row => ({ ...row, _known: false }));
+            const knownRows = showKnown ? currentKnownIssues.map(row => ({ ...row, _known: true })) : [];
+            const allRows = [...activeRows, ...knownRows];
+
+            if (allRows.length === 0) {
+                body.innerHTML = '<div style="padding:2rem; text-align:center">No issues found.</div>';
+                return;
+            }
+
+            const firstRow = allRows[0];
+            const cols = Object.keys(firstRow).filter(c => c !== '_known');
+            const issueKeyCol = cols.find(c => c.toLowerCase() === 'issuekey');
+            let html = `<table class="compact-table"><thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}<th>Action</th></tr></thead><tbody>`;
+
+            allRows.forEach(row => {
+                const rowClass = row._known ? ' class="known-row"' : '';
+                const issueKeyVal = issueKeyCol ? row[issueKeyCol] : '';
+                const btn = row._known
+                    ? `<button class="btn-remove-known" onclick="removeKnown('${currentControlCode}', '${issueKeyVal}')">Remove Known</button>`
+                    : `<button class="btn-warning" onclick="markKnown('${currentControlCode}', '${issueKeyVal}')">Mark Known</button>`;
+                html += `<tr${rowClass}>${cols.map(c => `<td>${row[c] ?? ''}</td>`).join('')}<td style="text-align:center">${btn}</td></tr>`;
+            });
+
+            html += '</tbody></table>';
+            body.innerHTML = html;
+        }
+
+        function exportToExcel() {
+            const showKnown = document.getElementById('show-known-toggle').checked;
+            const activeRows = currentIssues.map(row => ({ ...row, _status: 'active' }));
+            const knownRows = showKnown ? currentKnownIssues.map(row => ({ ...row, _status: 'known' })) : [];
+            const allRows = [...activeRows, ...knownRows];
+
+            if (allRows.length === 0) { alert('No data to export'); return; }
+
+            const cols = Object.keys(allRows[0]);
+            const header = cols.join(',');
+            const rows = allRows.map(row =>
+                cols.map(col => {
+                    let val = row[col] === null || row[col] === undefined ? '' : String(row[col]);
+                    val = val.replace(/"/g, '""');
+                    return `"${val}"`;
+                }).join(',')
+            );
+
+            const csvContent = "data:text/csv;charset=utf-8," + [header, ...rows].join("\n");
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `dq_issues_${currentControlCode}_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        async function markKnown(controlCode, issueKey) {
+            if (!confirm(`Mark ${issueKey} as known for ${controlCode}?`)) return;
+            const res = await fetch('/api/known-issues', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ controlCode, issueKey, description: 'Marked from dashboard' })
+            });
+            if (res.ok) {
+                const [activeData, knownData] = await Promise.all([
+                    fetchData(`/api/controls/${controlCode}/issues`),
+                    fetchData(`/api/controls/${controlCode}/known-issues`)
+                ]);
+                currentIssues = activeData;
+                currentKnownIssues = knownData;
+                document.getElementById('show-known-toggle').checked = true;
+                renderIssueTable();
+            }
+        }
+
+        async function removeKnown(controlCode, issueKey) {
+            if (!confirm(`Remove ${issueKey} from known issues for ${controlCode}?`)) return;
+            const res = await fetch('/api/known-issues/remove', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ controlCode, issueKey })
+            });
+            if (res.ok) {
+                const [activeData, knownData] = await Promise.all([
+                    fetchData(`/api/controls/${controlCode}/issues`),
+                    fetchData(`/api/controls/${controlCode}/known-issues`)
+                ]);
+                currentIssues = activeData;
+                currentKnownIssues = knownData;
+                renderIssueTable();
+            }
+        }
+
+        async function runControls() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerText = 'Running...';
+            try {
+                await fetch('/api/run', { method: 'POST' });
+                alert('Execution complete');
+                showView(currentView);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Run All Controls';
+            }
+        }
+
+        // ── Queries view ──────────────────────────────────────────────────────────
+
+        async function loadQueries() {
+            const resp = await fetch('/api/queries').then(r => r.json());
+            queryWriteEnabled = resp.writeEnabled;
+            document.getElementById('new-query-btn').style.display = queryWriteEnabled ? 'inline-block' : 'none';
+            renderQueriesList(resp.items);
+        }
+
+        function renderQueriesList(items) {
+            if (items.length === 0) {
+                document.getElementById('content').innerHTML =
+                    '<div class="card"><p>No SQL files found in the controls directory.</p></div>';
+                return;
+            }
+            let html = `<div class="card"><table>
+                <thead><tr>
+                    <th>File</th><th>Code</th><th>Description</th><th></th><th>Actions</th>
+                </tr></thead><tbody>`;
+            items.forEach(item => {
+                const badge = item.demo ? '<span class="demo-badge">DEMO</span>' : '';
+                const editLabel = queryWriteEnabled ? 'Edit' : 'View';
+                const delBtn = queryWriteEnabled
+                    ? ` <button class="btn-danger" onclick="confirmDeleteQuery('${item.filename}')">Delete</button>` : '';
+                html += `<tr>
+                    <td style="font-family:monospace;font-size:0.85rem">${item.filename}</td>
+                    <td><b>${item.code ?? '—'}</b></td>
+                    <td>${item.description ?? '—'}</td>
+                    <td>${badge}</td>
+                    <td style="display:flex;gap:0.4rem;align-items:center">
+                        <button class="btn-outline" onclick="openEditor('${item.filename}')">${editLabel}</button>${delBtn}
+                    </td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+            document.getElementById('content').innerHTML = html;
+        }
+
+        function openNewQueryEditor() { openEditor(null); }
+
+        async function openEditor(filename) {
+            if (cmEditor) { cmEditor.toTextArea(); cmEditor = null; }
+            currentEditFilename = filename;
+
+            document.querySelector('main').classList.add('editor-mode');
+            document.getElementById('view-title').innerText = filename ? `Query: ${filename}` : 'New Query';
+            document.getElementById('run-btn').style.display           = 'none';
+            document.getElementById('new-query-btn').style.display     = 'none';
+            document.getElementById('run-query-btn').style.display     = 'inline-block';
+            document.getElementById('save-query-btn').style.display    = queryWriteEnabled ? 'inline-block' : 'none';
+            document.getElementById('cancel-editor-btn').style.display = 'inline-block';
+
+            let sqlContent = QUERY_BOILERPLATE;
+            if (filename) {
+                const data = await fetch(`/api/queries/${encodeURIComponent(filename)}`).then(r => r.json());
+                sqlContent = data.content;
+            }
+
+            const topBar = !filename
+                ? `<div class="editor-new-file-bar">
+                       <label style="font-size:0.875rem;font-weight:600;white-space:nowrap">Filename</label>
+                       <input id="new-filename" type="text" placeholder="my_control.sql"
+                           style="padding:0.35rem 0.65rem;border:1px solid var(--border);border-radius:0.375rem;
+                                  width:260px;font-family:monospace;font-size:0.875rem">
+                   </div>`
+                : `<div class="editor-filename-bar">${filename}</div>`;
+
+            resultsCollapsed = false;
+            resultsHeight    = 0;
+
+            document.getElementById('content').innerHTML = `
+                <div class="editor-pane">
+                    ${topBar}
+                    <textarea id="cm-textarea">${escHtml(sqlContent)}</textarea>
+                    <div id="resize-handle" class="resize-handle" style="display:none"></div>
+                    <div id="results-panel" class="results-panel" style="display:none">
+                        <div id="results-header" class="results-panel-header" onclick="toggleResultsCollapse()" style="cursor:pointer">
+                            <span id="collapse-icon" style="font-size:0.65rem;margin-right:0.5rem;transition:transform 0.15s">▼</span>
+                            <span id="results-summary" style="flex:1"></span>
+                            <button onclick="event.stopPropagation();closeResults()"
+                                style="border:none;background:none;cursor:pointer;font-size:1rem;color:inherit;padding:0;line-height:1">&times;</button>
+                        </div>
+                        <div id="results-body" class="results-panel-body"></div>
+                    </div>
+                </div>`;
+
+            cmEditor = CodeMirror.fromTextArea(document.getElementById('cm-textarea'), {
+                mode:           'text/x-sql',
+                theme:          'eclipse',
+                lineNumbers:    true,
+                indentWithTabs: false,
+                tabSize:        4,
+                autofocus:      true,
+                extraKeys:      { 'Tab': cm => cm.execCommand('indentMore') }
+            });
+            if (!queryWriteEnabled) cmEditor.setOption('readOnly', true);
+            initResizeDrag();
+            requestAnimationFrame(fitCmEditor);
+        }
+
+        function fitCmEditor() {
+            if (!cmEditor) return;
+            const pane = document.querySelector('.editor-pane');
+            if (!pane) return;
+            const reserved = [...pane.children]
+                .filter(el => !el.classList.contains('CodeMirror'))
+                .reduce((h, el) => h + el.offsetHeight, 0);
+            const available = pane.offsetHeight - reserved;
+            if (available > 80) cmEditor.setSize(null, available);
+        }
+
+        async function runQuery() {
+            if (!cmEditor) return;
+            const btn = document.getElementById('run-query-btn');
+            btn.disabled = true;
+            btn.textContent = 'Running…';
+
+            const panel  = document.getElementById('results-panel');
+            const header = document.getElementById('results-header');
+            const body   = document.getElementById('results-body');
+            const summary = document.getElementById('results-summary');
+            const pane   = document.querySelector('.editor-pane');
+
+            // Expand if currently collapsed
+            if (resultsCollapsed) {
+                resultsCollapsed = false;
+                document.getElementById('results-body').style.display = '';
+                document.getElementById('collapse-icon').style.transform = '';
+            }
+            // Size panel: keep existing height if already open, else default to ~35%
+            const panelHeight = resultsHeight || Math.max(180, Math.floor(pane.offsetHeight * 0.35));
+            panel.style.height = panelHeight + 'px';
+            panel.style.display = 'flex';
+            document.getElementById('resize-handle').style.display = 'block';
+            header.className = 'results-panel-header';
+            summary.textContent = 'Running…';
+            body.innerHTML = '';
+            requestAnimationFrame(fitCmEditor);
+
+            try {
+                const res = await fetch('/api/queries/run', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ content: cmEditor.getValue() })
+                });
+
+                if (!res.ok) {
+                    const msg = await res.text();
+                    header.className = 'results-panel-header error';
+                    summary.textContent = 'Error';
+                    body.innerHTML = `<div style="padding:0.75rem 1rem;font-family:monospace;font-size:0.8rem;color:#991b1b;white-space:pre-wrap">${escHtml(msg)}</div>`;
+                    return;
+                }
+
+                const data = await res.json();
+                const rows = data.rows;
+
+                if (rows.length === 0) {
+                    summary.textContent = 'Query returned no rows';
+                    body.innerHTML = '<div style="padding:0.75rem 1rem;color:#64748b;font-size:0.875rem">No rows returned.</div>';
+                    return;
+                }
+
+                const cols = Object.keys(rows[0]);
+                summary.textContent = `${rows.length} row${rows.length !== 1 ? 's' : ''}${data.truncated ? ' (truncated to 500)' : ''}`;
+
+                let html = '<table><thead><tr>' + cols.map(c => `<th>${escHtml(c)}</th>`).join('') + '</tr></thead><tbody>';
+                rows.forEach(row => {
+                    html += '<tr>' + cols.map(c => {
+                        const v = row[c];
+                        return v === null || v === undefined
+                            ? '<td><span class="null-val">NULL</span></td>'
+                            : `<td>${escHtml(String(v))}</td>`;
+                    }).join('') + '</tr>';
+                });
+                html += '</tbody></table>';
+                body.innerHTML = html;
+
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '&#9654; Run';
+                requestAnimationFrame(() => {
+                    fitCmEditor();
+                    // remember height for next run / collapse-restore
+                    const p = document.getElementById('results-panel');
+                    if (p && p.style.display !== 'none') resultsHeight = p.offsetHeight;
+                });
+            }
+        }
+
+        function closeResults() {
+            const panel = document.getElementById('results-panel');
+            const handle = document.getElementById('resize-handle');
+            if (panel)  { panel.style.display  = 'none'; }
+            if (handle) { handle.style.display = 'none'; }
+            resultsCollapsed = false;
+            resultsHeight    = 0;
+            requestAnimationFrame(fitCmEditor);
+        }
+
+        function toggleResultsCollapse() {
+            const panel  = document.getElementById('results-panel');
+            const body   = document.getElementById('results-body');
+            const icon   = document.getElementById('collapse-icon');
+            const handle = document.getElementById('resize-handle');
+            if (!panel) return;
+            resultsCollapsed = !resultsCollapsed;
+            if (resultsCollapsed) {
+                resultsHeight = panel.offsetHeight;       // save before collapsing
+                body.style.display   = 'none';
+                panel.style.height   = 'auto';
+                if (handle) handle.style.display = 'none';
+                icon.style.transform = 'rotate(-90deg)';
+            } else {
+                body.style.display   = '';
+                panel.style.height   = (resultsHeight || 220) + 'px';
+                if (handle) handle.style.display = 'block';
+                icon.style.transform = '';
+            }
+            requestAnimationFrame(fitCmEditor);
+        }
+
+        function initResizeDrag() {
+            const handle = document.getElementById('resize-handle');
+            if (!handle) return;
+            handle.addEventListener('mousedown', e => {
+                const panel = document.getElementById('results-panel');
+                dragState = { startY: e.clientY, startHeight: panel ? panel.offsetHeight : 220 };
+                handle.classList.add('dragging');
+                document.body.style.userSelect = 'none';
+                document.body.style.cursor     = 'ns-resize';
+                e.preventDefault();
+            });
+        }
+
+        async function saveQuery() {
+            const content = cmEditor.getValue();
+            const codeMatch = content.match(/\$CODE=(.+)/i);
+            const descMatch = content.match(/\$DESCRIPTION=(.+)/i);
+            if (!codeMatch || !codeMatch[1].trim()) { showEditorError('$CODE is missing or empty in the query comment'); return; }
+            if (!descMatch || !descMatch[1].trim()) { showEditorError('$DESCRIPTION is missing or empty in the query comment'); return; }
+
+            let url, method, body;
+            if (currentEditFilename) {
+                url    = `/api/queries/${encodeURIComponent(currentEditFilename)}`;
+                method = 'PUT';
+                body   = { content };
+            } else {
+                const inputFname = (document.getElementById('new-filename')?.value ?? '').trim();
+                const fname = inputFname || (codeMatch[1].trim() + '.sql');
+                if (!fname.endsWith('.sql'))   { showEditorError('Filename must end with .sql'); return; }
+                url    = '/api/queries';
+                method = 'POST';
+                body   = { filename: fname, content };
+            }
+
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify(body)
+            });
+            if (res.ok) {
+                navTo('queries');
+            } else {
+                showEditorError(await res.text());
+            }
+        }
+
+        async function confirmDeleteQuery(filename) {
+            if (!confirm(`Delete "${filename}"?\nThis cannot be undone.`)) return;
+            const res = await fetch(`/api/queries/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+            if (res.ok) {
+                await loadQueries();
+            } else {
+                alert('Delete failed: ' + await res.text());
+            }
+        }
+
+        function showEditorError(msg) {
+            const pane = document.querySelector('.editor-pane');
+            if (!pane) return;
+            let el = document.getElementById('editor-msg');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'editor-msg';
+                el.className = 'editor-msg';
+                // insert after the top bar (first child)
+                pane.insertBefore(el, pane.children[1]);
+            }
+            el.textContent = msg;
+            requestAnimationFrame(fitCmEditor);
+        }
+
+        function navTo(view) {
+            const target = [...document.querySelectorAll('.nav-item')]
+                .find(el => el.getAttribute('onclick')?.includes(`'${view}'`));
+            showView(view, target ? { target } : null);
+        }
+
+        function escHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // ── Issues modal ──────────────────────────────────────────────────────────
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        window.addEventListener('resize', fitCmEditor);
+
+        document.addEventListener('mousemove', e => {
+            if (!dragState) return;
+            const panel = document.getElementById('results-panel');
+            const pane  = document.querySelector('.editor-pane');
+            if (!panel || !pane) return;
+            const delta     = dragState.startY - e.clientY;   // drag up → bigger panel
+            const minH      = 60;
+            const maxH      = pane.offsetHeight - 120;
+            const newHeight = Math.max(minH, Math.min(maxH, dragState.startHeight + delta));
+            panel.style.height = newHeight + 'px';
+            resultsHeight = newHeight;
+            requestAnimationFrame(fitCmEditor);
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!dragState) return;
+            dragState = null;
+            const handle = document.getElementById('resize-handle');
+            if (handle) handle.classList.remove('dragging');
+            document.body.style.userSelect = '';
+            document.body.style.cursor     = '';
+        });
+
+        // Initial load
+        window.onload = () => {
+            const firstNavItem = document.querySelector('.nav-item');
+            showView('summary', { target: firstNavItem });
+        }
+    </script>
+</body>
+</html>
