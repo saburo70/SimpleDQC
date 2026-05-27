@@ -1,1 +1,4 @@
-0 0 * * * * 
+# Schedule lines: <second> <minute> <hour> <day-of-month> <month> <day-of-week> <name>
+# Lines starting with # are ignored. The name must be a single token (letters, digits, _ or -).
+0 0 0 * * * daily
+0 0 0 * * 0 weekly

@@ -368,6 +368,32 @@
         }
         .btn-run:hover { background: #15803d; }
         .btn-run:disabled { background: #86efac; cursor: default; }
+
+        .schedule-table select, .schedule-table input[type="text"] {
+            padding: 0.35rem 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 0.375rem;
+            background: white;
+            font-size: 0.875rem;
+        }
+        .schedule-table input[type="text"] { font-family: monospace; }
+        .schedule-table th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        .schedule-table .cron-preview {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #64748b;
+            padding: 0 0.5rem;
+            white-space: nowrap;
+        }
+        .schedule-help {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/eclipse.min.css">
@@ -380,6 +406,7 @@
         <div class="nav-item active" onclick="showView('summary', event)">Control Summary</div>
         <div class="nav-item" onclick="showView('history', event)">Execution History</div>
         <div class="nav-item" onclick="showView('queries', event)">Queries</div>
+        <div class="nav-item" onclick="showView('schedules', event)">Schedules</div>
     </nav>
     <main>
         <div class="header">
@@ -400,6 +427,8 @@
                 <button id="run-query-btn" class="btn-run" style="display:none" onclick="runQuery()">&#9654; Run</button>
                 <button id="save-query-btn" class="btn" style="display:none" onclick="saveQuery()">Save</button>
                 <button id="cancel-editor-btn" class="btn-secondary" style="display:none" onclick="navTo('queries')">Cancel</button>
+                <button id="add-schedule-btn" class="btn" style="display:none" onclick="addScheduleRow()">+ Add Schedule</button>
+                <button id="save-schedules-btn" class="btn" style="display:none" onclick="saveSchedules()">Save Schedules</button>
             </div>
         </div>
 
@@ -467,11 +496,13 @@
             content.innerHTML = 'Loading...';
             filterContainer.style.display      = view === 'summary' ? 'flex' : 'none';
             historyFilterContainer.style.display = view === 'history' ? 'flex' : 'none';
-            document.getElementById('run-btn').style.display           = view === 'queries' ? 'none' : '';
+            document.getElementById('run-btn').style.display           = (view === 'queries' || view === 'schedules') ? 'none' : '';
             document.getElementById('new-query-btn').style.display     = 'none';
             document.getElementById('run-query-btn').style.display     = 'none';
             document.getElementById('save-query-btn').style.display    = 'none';
             document.getElementById('cancel-editor-btn').style.display = 'none';
+            document.getElementById('add-schedule-btn').style.display  = 'none';
+            document.getElementById('save-schedules-btn').style.display = 'none';
 
             if (view === 'summary') {
                 title.innerText = 'Control Summary';
@@ -485,6 +516,9 @@
             } else if (view === 'queries') {
                 title.innerText = 'Queries';
                 await loadQueries();
+            } else if (view === 'schedules') {
+                title.innerText = 'Schedules';
+                await loadSchedules();
             }
         }
 
@@ -1090,6 +1124,164 @@
             document.body.style.userSelect = '';
             document.body.style.cursor     = '';
         });
+
+        // ── Schedules view ────────────────────────────────────────────────────────
+
+        let schedulesWriteEnabled = false;
+        let schedulesData = [];
+
+        const CRON_FIELDS = [
+            { key: 'second', label: 'Second', min: 0, max: 59 },
+            { key: 'minute', label: 'Minute', min: 0, max: 59 },
+            { key: 'hour',   label: 'Hour',   min: 0, max: 23 },
+            { key: 'dom',    label: 'Day of Month', min: 1, max: 31 },
+            { key: 'month',  label: 'Month', min: 1, max: 12,
+              named: { 1:'JAN',2:'FEB',3:'MAR',4:'APR',5:'MAY',6:'JUN',
+                       7:'JUL',8:'AUG',9:'SEP',10:'OCT',11:'NOV',12:'DEC' } },
+            { key: 'dow',    label: 'Day of Week', min: 0, max: 6,
+              named: { 0:'SUN',1:'MON',2:'TUE',3:'WED',4:'THU',5:'FRI',6:'SAT' } }
+        ];
+
+        function parseCronToParts(cron) {
+            const tokens = (cron || '').trim().split(/\s+/);
+            return {
+                second: tokens[0] || '*',
+                minute: tokens[1] || '*',
+                hour:   tokens[2] || '*',
+                dom:    tokens[3] || '*',
+                month:  tokens[4] || '*',
+                dow:    tokens[5] || '*'
+            };
+        }
+
+        function partsToCron(parts) {
+            return CRON_FIELDS.map(f => parts[f.key] || '*').join(' ');
+        }
+
+        async function loadSchedules() {
+            const resp = await fetch('/api/schedules').then(r => r.json());
+            schedulesWriteEnabled = resp.writeEnabled;
+            // _persistedName tracks the name stored on the server, so we can DELETE by that name
+            // even if the user has edited the row's name field. null = newly added, not yet saved.
+            schedulesData = resp.items.map(it => ({
+                _persistedName: it.name,
+                name: it.name,
+                ...parseCronToParts(it.cron)
+            }));
+            document.getElementById('add-schedule-btn').style.display = schedulesWriteEnabled ? 'inline-block' : 'none';
+            document.getElementById('save-schedules-btn').style.display = schedulesWriteEnabled ? 'inline-block' : 'none';
+            renderSchedules();
+        }
+
+        function renderSchedules() {
+            const helpHtml = `<div class="schedule-help">
+                Each row defines a Spring cron schedule. Use <b>*</b> for "every", or pick a specific value.
+                ${schedulesWriteEnabled ? 'Edit fields then click <b>Save Schedules</b>.' : 'Read-only — set <code>dq.allow-write=true</code> to enable editing.'}
+            </div>`;
+
+            if (schedulesData.length === 0) {
+                document.getElementById('content').innerHTML =
+                    helpHtml + '<div class="card"><p>No schedules defined.' +
+                    (schedulesWriteEnabled ? ' Click <b>+ Add Schedule</b> to create one.' : '') + '</p></div>';
+                return;
+            }
+
+            let html = helpHtml + '<div class="card"><table class="schedule-table"><thead><tr>';
+            CRON_FIELDS.forEach(f => { html += `<th>${f.label}</th>`; });
+            html += '<th>Name</th><th>Cron</th>';
+            if (schedulesWriteEnabled) html += '<th></th>';
+            html += '</tr></thead><tbody>';
+
+            schedulesData.forEach((row, idx) => {
+                html += '<tr>';
+                CRON_FIELDS.forEach(f => {
+                    html += `<td>${buildFieldSelect(f, row[f.key], idx)}</td>`;
+                });
+                html += `<td><input type="text" value="${escHtml(row.name || '')}"
+                            ${schedulesWriteEnabled ? '' : 'disabled'}
+                            oninput="updateScheduleField(${idx}, 'name', this.value)"
+                            style="width:140px"></td>`;
+                html += `<td class="cron-preview" id="cron-preview-${idx}">${partsToCron(row)}</td>`;
+                if (schedulesWriteEnabled) {
+                    html += `<td><button class="btn-danger" onclick="deleteScheduleRow(${idx})">Delete</button></td>`;
+                }
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+            document.getElementById('content').innerHTML = html;
+        }
+
+        function buildFieldSelect(field, currentValue, idx) {
+            const disabled = schedulesWriteEnabled ? '' : 'disabled';
+            let opts = `<option value="*"${currentValue === '*' ? ' selected' : ''}>* (every)</option>`;
+            for (let v = field.min; v <= field.max; v++) {
+                const label = field.named ? `${v} (${field.named[v]})` : String(v);
+                const sel = String(currentValue) === String(v) ? ' selected' : '';
+                opts += `<option value="${v}"${sel}>${label}</option>`;
+            }
+            // Allow non-standard expressions (e.g. */5, 1-5, MON-FRI) to round-trip
+            const isStandard = currentValue === '*' ||
+                (Number.isInteger(+currentValue) && +currentValue >= field.min && +currentValue <= field.max);
+            if (!isStandard) {
+                opts += `<option value="${escHtml(currentValue)}" selected>${escHtml(currentValue)}</option>`;
+            }
+            return `<select ${disabled} onchange="updateScheduleField(${idx}, '${field.key}', this.value)">${opts}</select>`;
+        }
+
+        function updateScheduleField(idx, key, value) {
+            schedulesData[idx][key] = value;
+            const preview = document.getElementById(`cron-preview-${idx}`);
+            if (preview) preview.textContent = partsToCron(schedulesData[idx]);
+        }
+
+        function addScheduleRow() {
+            schedulesData.push({
+                _persistedName: null,
+                name: 'schedule_' + (schedulesData.length + 1),
+                second: '0', minute: '0', hour: '*', dom: '*', month: '*', dow: '*'
+            });
+            renderSchedules();
+        }
+
+        async function deleteScheduleRow(idx) {
+            const row = schedulesData[idx];
+            if (!row) return;
+            const persisted = row._persistedName;
+            const label = persisted || row.name || '(unnamed)';
+            if (!confirm(`Delete schedule "${label}"? This cannot be undone.`)) return;
+
+            if (!persisted) {
+                // Newly added, never saved — just drop locally
+                schedulesData.splice(idx, 1);
+                renderSchedules();
+                return;
+            }
+
+            const res = await fetch(`/api/schedules/${encodeURIComponent(persisted)}`, { method: 'DELETE' });
+            if (res.ok) {
+                await loadSchedules();
+            } else {
+                alert('Delete failed: ' + await res.text());
+            }
+        }
+
+        async function saveSchedules() {
+            const items = schedulesData.map(row => ({
+                name: (row.name || '').trim(),
+                cron: partsToCron(row)
+            }));
+            const res = await fetch('/api/schedules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items })
+            });
+            if (res.ok) {
+                alert('Schedules saved and reloaded');
+                await loadSchedules();
+            } else {
+                alert('Save failed: ' + await res.text());
+            }
+        }
 
         // Initial load
         window.onload = () => {

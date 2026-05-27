@@ -82,6 +82,7 @@ For detailed instructions on how to configure and run SimpleDQC, please refer to
 - [API Endpoints](docs/API_ENDPOINTS.md)
 - [TLS/SSL Configuration](docs/TLS_CONFIGURATION.md)
 - [Control Query Format](docs/CONTROL_QUERIES.md)
+- [Scheduler Guide](docs/SCHEDULER_GUIDE.md)
 - [Email Configuration](docs/EMAIL_CONFIGURATION.md)
 - [Repository Configuration](docs/REPOSITORY_CONFIGURATION.md)
 

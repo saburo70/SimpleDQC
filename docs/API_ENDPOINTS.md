@@ -66,6 +66,57 @@ Base Path: `/api/queries`
 
 ---
 
+## Scheduler Controller
+
+Base Path: `/api/schedules`
+
+See [Scheduler Guide](SCHEDULER_GUIDE.md) for a full overview.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/schedules` | Lists all configured schedules and the write-enabled flag. |
+| POST | `/api/schedules` | Replaces the full schedule list, persists `scheduler/cron.txt`, and reloads the live scheduler. Requires `dq.allow-write=true`. |
+| DELETE | `/api/schedules/{name}` | Removes the named schedule, persists the file, and reloads the live scheduler. Requires `dq.allow-write=true`. |
+
+### GET `/api/schedules`
+**Response:** `200 OK`
+```json
+{
+  "items": [
+    { "name": "daily",  "cron": "0 0 0 * * *" },
+    { "name": "weekly", "cron": "0 0 0 * * 0" }
+  ],
+  "writeEnabled": true
+}
+```
+
+### POST `/api/schedules`
+**Request Body:**
+```json
+{
+  "items": [
+    { "name": "daily",  "cron": "0 0 0 * * *" },
+    { "name": "weekly", "cron": "0 0 0 * * 0" }
+  ]
+}
+```
+**Response:** `200 OK`
+```json
+{ "saved": 2 }
+```
+**Constraints:**
+- Each `name` must be unique and match `[A-Za-z0-9_-]+`
+- Each `cron` must be a valid 6-field Spring cron expression
+
+### DELETE `/api/schedules/{name}`
+**Response:** `200 OK`
+```json
+{ "deleted": "weekly" }
+```
+Returns `404 Not Found` if no schedule with the given name exists.
+
+---
+
 ## Request/Response Details
 
 ### POST `/api/run`
