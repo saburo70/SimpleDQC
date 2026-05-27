@@ -22,6 +22,7 @@ public class QueryController {
     private static final String CONTROLS_DIR = "controls";
     private static final Pattern CODE_PATTERN = Pattern.compile("\\$CODE=(.+)",        Pattern.CASE_INSENSITIVE);
     private static final Pattern DESC_PATTERN = Pattern.compile("\\$DESCRIPTION=(.+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern EXEC_PATTERN = Pattern.compile("\\$EXEC=(.+)",        Pattern.CASE_INSENSITIVE);
     private static final int     RUN_ROW_LIMIT = 500;
 
     private final boolean       allowWrite;
@@ -64,6 +65,7 @@ public class QueryController {
                         item.put("filename",    f.getName());
                         item.put("code",        extract(content, CODE_PATTERN));
                         item.put("description", extract(content, DESC_PATTERN));
+                        item.put("exec",        extract(content, EXEC_PATTERN));
                         item.put("demo",        f.getName().startsWith("__demo__"));
                         items.add(item);
                     } catch (IOException ignored) {}
@@ -87,6 +89,7 @@ public class QueryController {
             result.put("filename",    filename);
             result.put("code",        extract(content, CODE_PATTERN));
             result.put("description", extract(content, DESC_PATTERN));
+            result.put("exec",        extract(content, EXEC_PATTERN));
             result.put("content",     content);
             return ResponseEntity.ok(result);
         } catch (IOException e) {

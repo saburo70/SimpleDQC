@@ -109,7 +109,7 @@ public class DqcSchedulerConfig {
                     ScheduledFuture<?> future = taskScheduler.schedule(() -> {
                         try {
                             System.out.println("[schedule:" + name + "] Executing scheduled DQ controls...");
-                            dqcService.runAllControls();
+                            dqcService.runAllControls(name);
                         } catch (Exception e) {
                             System.err.println("[schedule:" + name + "] Scheduled DQ execution failed: " + e.getMessage());
                         }

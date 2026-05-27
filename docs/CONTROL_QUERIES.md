@@ -48,6 +48,23 @@ Every control file **must** include two special comments in the file:
 | Control Code | `$CODE=<unique_code>` | Unique identifier for this control (used in API endpoints, execution history) |
 | Description | `$DESCRIPTION=<description>` | Human-readable description of what this control checks |
 
+### Optional Metadata
+
+| Metadata | Format | Description |
+|----------|--------|-------------|
+| Schedules | `$EXEC=<name1>,<name2>,...` | Comma-separated list of schedule names (from `scheduler/cron.txt`) under which this control should run. When omitted, the control runs under **every** schedule. The manual `POST /api/run` trigger always runs every control regardless of `$EXEC`. See the [Scheduler Guide](SCHEDULER_GUIDE.md). |
+
+**Example with `$EXEC`:**
+```sql
+/*
+$CODE=NIGHTLY_DEEP_CHECK
+$DESCRIPTION=Heavy referential integrity check
+$EXEC=nightly
+*/
+SELECT ...
+```
+With the above, the control runs only when the schedule named `nightly` fires, not on hourly or other schedules.
+
 ### SQL Query Requirements
 
 The SQL query must:
@@ -182,18 +199,22 @@ GET /api/queries
       "filename": "user_email_validation.sql",
       "code": "USER_EMAIL_VALID",
       "description": "Users with invalid email format",
+      "exec": null,
       "demo": false
     },
     {
       "filename": "__demo__missing_emails.sql",
       "code": "DQ001",
       "description": "Users without email",
+      "exec": "daily,weekly",
       "demo": true
     }
   ],
   "writeEnabled": false
 }
 ```
+
+The `exec` field reflects the `$EXEC=` comment in the SQL file. A `null` value means the control runs on every schedule.
 
 **Get a specific control:**
 ```bash
@@ -206,6 +227,7 @@ GET /api/queries/{filename}
   "filename": "user_email_validation.sql",
   "code": "USER_EMAIL_VALID",
   "description": "Users with invalid email format",
+  "exec": null,
   "content": "/*\n$CODE=USER_EMAIL_VALID\n$DESCRIPTION=Users with invalid email format\n*/\nSELECT ..."
 }
 ```

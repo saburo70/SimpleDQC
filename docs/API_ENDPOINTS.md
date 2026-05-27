@@ -163,12 +163,14 @@ Controls executed successfully
       "filename": "control_name.sql",
       "code": "CONTROL_CODE",
       "description": "Control description",
+      "exec": "daily,weekly",
       "demo": false
     }
   ],
   "writeEnabled": true
 }
 ```
+The `exec` field is `null` when the control has no `$EXEC` comment (i.e. it runs on every schedule). See [Control Query Format](CONTROL_QUERIES.md) and the [Scheduler Guide](SCHEDULER_GUIDE.md).
 
 ---
 
@@ -179,6 +181,7 @@ Controls executed successfully
   "filename": "control_name.sql",
   "code": "CONTROL_CODE",
   "description": "Control description",
+  "exec": null,
   "content": "SELECT ... -- $CODE=CONTROL_CODE\n-- $DESCRIPTION=Control description"
 }
 ```

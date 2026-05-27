@@ -71,7 +71,30 @@ The **+ Add Schedule**, **Save Schedules**, and **Delete** controls only appear 
 
 ---
 
-## 4. Troubleshooting
+## 4. Restricting Controls to Specific Schedules
+
+By default, every schedule runs **all** controls in the `controls/` folder. To bind a control to one or more specific schedules, add an `$EXEC=` comment to its SQL file listing the schedule names:
+
+```sql
+/*
+$CODE=NIGHTLY_DEEP_CHECK
+$DESCRIPTION=Heavy referential integrity check
+$EXEC=nightly,weekly
+*/
+SELECT ...
+```
+
+Rules:
+- **No `$EXEC` comment** → the control runs under every schedule (default behaviour).
+- **`$EXEC` present** → the control runs only when one of the listed schedule names fires.
+- The manual **Run All Controls** button (and `POST /api/run`) ignores `$EXEC` and runs everything.
+- Schedule names in `$EXEC` are matched literally against the names defined in `scheduler/cron.txt`. A typo silently excludes the control from every schedule.
+
+See [Control Queries](CONTROL_QUERIES.md) for the full SQL file format.
+
+---
+
+## 5. Troubleshooting
 
 - **Schedule doesn't fire** — check the application logs for `[schedule:<name>] Registered cron '<expr>'` at startup or after a save. If the expression is invalid, an error is logged and the schedule is skipped.
 - **Two schedules with the same name** — only the first occurrence is registered; subsequent duplicates are logged as `Skipping duplicate schedule name: <name>` and ignored.
@@ -79,7 +102,7 @@ The **+ Add Schedule**, **Save Schedules**, and **Delete** controls only appear 
 
 ---
 
-## 5. Related
+## 6. Related
 
 - [API Endpoints](API_ENDPOINTS.md) — programmatic access to schedule management
 - [Control Query Format](CONTROL_QUERIES.md) — what gets executed when a schedule fires

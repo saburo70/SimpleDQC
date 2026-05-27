@@ -44,6 +44,17 @@ public class DqcService {
     }
 
     public void runAllControls() throws IOException {
+        runAllControls(null);
+    }
+
+    /**
+     * Runs all SQL controls, optionally filtered by schedule name.
+     * <p>When {@code scheduleName} is null, every control is executed (manual "Run All Controls"
+     * trigger). When a schedule name is provided, only controls whose {@code $EXEC} comment
+     * lists that schedule are run. Controls without an {@code $EXEC} comment always run on
+     * every schedule.
+     */
+    public void runAllControls(String scheduleName) throws IOException {
         File dir = new File(CONTROLS_DIR);
         if (!dir.exists()) return;
 
@@ -51,9 +62,25 @@ public class DqcService {
         List<ControlResult> results = new ArrayList<>();
         for (File file : files) {
             if (!demoEnabled && file.getName().startsWith(DEMO_FILE_PREFIX)) continue;
+            if (scheduleName != null && !matchesSchedule(file, scheduleName)) continue;
             results.add(runControl(file));
         }
         emailService.sendControlsReport(results);
+    }
+
+    private boolean matchesSchedule(File file, String scheduleName) {
+        try {
+            String content = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+            String exec = extractCommentVariable(content, "EXEC");
+            if (exec == null || exec.isBlank()) return true; // No $EXEC = runs on all schedules
+            for (String token : exec.split(",")) {
+                if (token.trim().equals(scheduleName)) return true;
+            }
+            return false;
+        } catch (IOException e) {
+            System.err.println("Could not read control file " + file.getName() + ": " + e.getMessage());
+            return false;
+        }
     }
 
     private ControlResult runControl(File file) throws IOException {

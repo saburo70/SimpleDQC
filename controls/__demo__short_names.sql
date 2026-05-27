@@ -1,6 +1,7 @@
 /*
 $CODE=DQ002
 $DESCRIPTION=Users with short names
+$EXEC=daily,weekly,something
 */
 SELECT 
     CAST(id AS CHAR) as issueKey,
